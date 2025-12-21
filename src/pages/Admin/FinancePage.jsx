@@ -1,10 +1,5 @@
 import React, { useMemo, useState } from "react";
-import {
-  Search,
-  CheckCircle,
-  XCircle,
-  Download,
-} from "lucide-react";
+import { Search, CheckCircle, XCircle, Download } from "lucide-react";
 
 /* ---------------- TAB DEFINITIONS ---------------- */
 const TABS = [
@@ -15,8 +10,7 @@ const TABS = [
   { key: "merchant_payouts", label: "Merchant Payouts" },
 ];
 
-/* ---------------- DUMMY DATA ---------------- */
-// ✅ UPDATED STRUCTURE
+/* ---------------- ORDER DATA ---------------- */
 const ORDER_FINANCIALS = [
   {
     id: "ORD1001",
@@ -25,33 +19,35 @@ const ORDER_FINANCIALS = [
     order_value: 500,
     commission: 50,
     delivery_charge: 40,
-    status: "Delivered",
   },
   {
     id: "ORD1002",
     merchant: "Sweet Tooth",
-    partner: "Amit",
+    partner: "Ravi",
     order_value: 320,
     commission: 32,
     delivery_charge: 30,
-    status: "Delivered",
+  },
+  {
+    id: "ORD1003",
+    merchant: "Snack Corner",
+    partner: "Amit",
+    order_value: 420,
+    commission: 42,
+    delivery_charge: 35,
   },
 ];
 
+/* ---------------- OTHER DUMMY DATA ---------------- */
 const DP_REQUESTS = [
   { id: 1, name: "Ravi Kumar", amount: 2400, type: "Weekly", status: "Pending" },
-  { id: 2, name: "Amit Patil", amount: 9100, type: "Monthly", status: "Pending" },
 ];
-
 const MERCHANT_REQUESTS = [
   { id: 11, name: "Coffee House", amount: 12800, type: "Monthly", status: "Pending" },
-  { id: 12, name: "Sweet Tooth", amount: 4200, type: "Weekly", status: "Pending" },
 ];
-
 const DP_PAYOUTS = [
   { id: 21, name: "Ravi Kumar", amount: 8200, period: "Monthly", status: "Paid" },
 ];
-
 const MERCHANT_PAYOUTS = [
   { id: 31, name: "Coffee House", amount: 15400, period: "Monthly", status: "Paid" },
 ];
@@ -59,13 +55,8 @@ const MERCHANT_PAYOUTS = [
 /* ---------------- CSV EXPORT ---------------- */
 const exportCSV = (filename, rows) => {
   if (!rows.length) return alert("No data to export");
-
   const headers = Object.keys(rows[0]).join(",");
-  const csv = [
-    headers,
-    ...rows.map((r) => Object.values(r).join(",")),
-  ].join("\n");
-
+  const csv = [headers, ...rows.map(r => Object.values(r).join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -79,46 +70,24 @@ const exportCSV = (filename, rows) => {
 export default function FinancePage() {
   const [activeTab, setActiveTab] = useState("order_financials");
   const [search, setSearch] = useState("");
+  const [expandedPartner, setExpandedPartner] = useState(null);
 
-  const [dpRequests, setDpRequests] = useState(DP_REQUESTS);
-  const [merchantRequests, setMerchantRequests] = useState(MERCHANT_REQUESTS);
-
-  /* ---------------- SUMMARY CARDS ---------------- */
-  const summary = useMemo(() => {
-    const paid =
-      DP_PAYOUTS.reduce((s, x) => s + x.amount, 0) +
-      MERCHANT_PAYOUTS.reduce((s, x) => s + x.amount, 0);
-
-    const pending =
-      dpRequests.reduce((s, x) => s + x.amount, 0) +
-      merchantRequests.reduce((s, x) => s + x.amount, 0);
-
-    return {
-      totalPaid: paid,
-      pendingRequests: pending,
-      totalRequests: dpRequests.length + merchantRequests.length,
-    };
-  }, [dpRequests, merchantRequests]);
-
-  /* ---------------- ACTIONS ---------------- */
-  const approveRequest = (id, type) => {
-    if (type === "dp") {
-      setDpRequests(dpRequests.map(r => r.id === id ? { ...r, status: "Approved" } : r));
-    } else {
-      setMerchantRequests(merchantRequests.map(r => r.id === id ? { ...r, status: "Approved" } : r));
-    }
-  };
-
-  const rejectRequest = (id, type) => {
-    if (type === "dp") {
-      setDpRequests(dpRequests.map(r => r.id === id ? { ...r, status: "Rejected" } : r));
-    } else {
-      setMerchantRequests(merchantRequests.map(r => r.id === id ? { ...r, status: "Rejected" } : r));
-    }
-  };
+  /* ---------------- GROUP BY DELIVERY PARTNER ---------------- */
+  const groupedByPartner = useMemo(() => {
+    const map = {};
+    ORDER_FINANCIALS.forEach(o => {
+      const totalPaid = o.order_value + o.delivery_charge;
+      if (!map[o.partner]) {
+        map[o.partner] = { orders: [], total: 0 };
+      }
+      map[o.partner].orders.push({ ...o, totalPaid });
+      map[o.partner].total += totalPaid;
+    });
+    return map;
+  }, []);
 
   const filterBySearch = (list) =>
-    list.filter((x) =>
+    list.filter(x =>
       JSON.stringify(x).toLowerCase().includes(search.toLowerCase())
     );
 
@@ -126,32 +95,14 @@ export default function FinancePage() {
     <div className="max-w-7xl mx-auto p-4 space-y-6">
       <h2 className="text-xl font-semibold">💰 Finance</h2>
 
-      {/* SUMMARY */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="text-sm text-gray-500">Total Paid</div>
-          <div className="text-2xl font-bold text-green-600">₹{summary.totalPaid}</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="text-sm text-gray-500">Pending Requests</div>
-          <div className="text-2xl font-bold text-orange-500">₹{summary.pendingRequests}</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="text-sm text-gray-500">Total Requests</div>
-          <div className="text-2xl font-bold">{summary.totalRequests}</div>
-        </div>
-      </div>
-
       {/* TABS */}
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((t) => (
+      <div className="flex gap-2 flex-wrap">
+        {TABS.map(t => (
           <button
             key={t.key}
-            onClick={() => { setActiveTab(t.key); setSearch(""); }}
-            className={`px-4 py-2 rounded-full text-sm font-medium ${
-              activeTab === t.key
-                ? "bg-orange-500 text-white"
-                : "bg-gray-200 text-gray-700"
+            onClick={() => { setActiveTab(t.key); setSearch(""); setExpandedPartner(null); }}
+            className={`px-4 py-2 rounded-full text-sm ${
+              activeTab === t.key ? "bg-orange-500 text-white" : "bg-gray-200"
             }`}
           >
             {t.label}
@@ -165,71 +116,80 @@ export default function FinancePage() {
           <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
             placeholder="Search..."
             className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
           />
         </div>
 
         <button
-          onClick={() =>
-            exportCSV(
-              `${activeTab}.csv`,
-              activeTab === "order_financials" ? ORDER_FINANCIALS :
-              activeTab === "dp_requests" ? dpRequests :
-              activeTab === "merchant_requests" ? merchantRequests :
-              activeTab === "dp_payouts" ? DP_PAYOUTS :
-              MERCHANT_PAYOUTS
-            )
-          }
+          onClick={() => exportCSV("order_financials.csv", ORDER_FINANCIALS)}
           className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm"
         >
           <Download size={16} /> Export CSV
         </button>
       </div>
 
-      {/* ================= ORDER FINANCIALS (FIXED) ================= */}
+      {/* ================= ORDER FINANCIALS ================= */}
       {activeTab === "order_financials" && (
         <div className="bg-white rounded-2xl shadow p-4 space-y-4">
-          {filterBySearch(ORDER_FINANCIALS).map(o => {
-            const merchantGets = o.order_value - o.commission;
-            const totalPaidByUser = o.order_value + o.delivery_charge;
 
-            return (
-              <div key={o.id} className="border-b pb-3">
-                <div className="font-medium">{o.id}</div>
-                <div className="text-sm text-gray-500">
-                  Merchant: {o.merchant} • Delivery Partner: {o.partner}
+          {/* SUMMARY BY DELIVERY PARTNER */}
+          {Object.entries(groupedByPartner).map(([partner, data]) => (
+            <div key={partner} className="border rounded-xl p-3">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium">{partner}</div>
+                  <div className="text-sm text-gray-500">
+                    Orders: {data.orders.length}
+                  </div>
                 </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-2 text-sm">
-                  <div>
-                    Order Value<br />
-                    <b>₹{o.order_value}</b>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500">Total to Collect</div>
+                  <div className="text-lg font-bold text-red-600">
+                    ₹{data.total}
                   </div>
-                  <div>
-                    Commission<br />
-                    <b className="text-red-600">- ₹{o.commission}</b>
-                  </div>
-                  <div>
-                    Merchant Gets<br />
-                    <b className="text-green-600">₹{merchantGets}</b>
-                  </div>
-                  <div>
-                    Delivery Charge (Customer)<br />
-                    <b>₹{o.delivery_charge}</b>
-                  </div>
-                  <div>
-                    Total Paid by User<br />
-                    <b className="text-blue-600">₹{totalPaidByUser}</b>
-                  </div>
+                  <button
+                    onClick={() =>
+                      setExpandedPartner(
+                        expandedPartner === partner ? null : partner
+                      )
+                    }
+                    className="text-sm text-blue-600 mt-1"
+                  >
+                    {expandedPartner === partner ? "Hide Orders" : "View Orders"}
+                  </button>
                 </div>
               </div>
-            );
-          })}
+
+              {/* ORDER DETAILS */}
+              {expandedPartner === partner && (
+                <div className="mt-3 border-t pt-3 space-y-2">
+                  {filterBySearch(data.orders).map(o => {
+                    const merchantGets = o.order_value - o.commission;
+                    return (
+                      <div key={o.id} className="text-sm bg-gray-50 p-2 rounded">
+                        <div className="font-medium">{o.id}</div>
+                        <div className="text-gray-600">
+                          Merchant: {o.merchant}
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-1">
+                          <div>Order ₹{o.order_value}</div>
+                          <div>Commission ₹{o.commission}</div>
+                          <div className="text-green-600">Merchant Gets ₹{merchantGets}</div>
+                          <div>Delivery ₹{o.delivery_charge}</div>
+                          <div className="font-semibold">User Paid ₹{o.totalPaid}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
-
+   
       {/* DP REQUESTS */}
       {activeTab === "dp_requests" && (
         <div className="bg-white rounded-2xl shadow p-4 space-y-3">
