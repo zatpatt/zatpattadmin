@@ -1,194 +1,222 @@
-// src/pages/Admin/OrdersPage.jsx
-import React, { useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import React, { useEffect, useState } from "react";
+import { getOrdersList, getOrderDetails } from "../../services/ordersApi";
 
-// Sample orders data
-const initialOrders = [
-  {
-    id: "ORD001",
-    customer: "Rahul",
-    merchant: "Shree Sweets",
-    deliveryPartner: "Not Assigned",
-    items: [
-      { name: "Gulab Jamun", qty: 2, price: 50 },
-      { name: "Ladoo", qty: 1, price: 120 },
-    ],
-    tax: 15,
-    shipping: 20,
-    amount: 220,
-    status: "Placed",
-  },
-  {
-    id: "ORD002",
-    customer: "Priya",
-    merchant: "Vada Pav House",
-    deliveryPartner: "Ramesh",
-    items: [
-      { name: "Vada Pav", qty: 4, price: 20 },
-    ],
-    tax: 5,
-    shipping: 10,
-    amount: 80,
-    status: "On the Way",
-  },
-  {
-    id: "ORD003",
-    customer: "Amit",
-    merchant: "Cafe 24",
-    deliveryPartner: "Not Assigned",
-    items: [
-      { name: "Coffee", qty: 2, price: 50 },
-      { name: "Sandwich", qty: 1, price: 50 },
-    ],
-    tax: 10,
-    shipping: 10,
-    amount: 150,
-    status: "Delivered",
-  },
+const statusOptions = [
+  "placed",
+  "accepted",
+  "preparing",
+  "on_the_way",
+  "delivered",
+  "cancelled",
 ];
 
-const statusOptions = ["Placed", "Accepted", "Preparing", "On the Way", "Delivered", "Cancelled"];
-
 export default function OrdersPage() {
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
-  // Update order status
-  const updateStatus = (id, newStatus) => {
-    setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+  // 🔹 FETCH ORDERS LIST
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const list = await getOrdersList();
+        setOrders(list);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load orders");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  // 🔹 UI-ONLY updates (backend later)
+  const updateStatus = (order_id, status) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.order_id === order_id ? { ...o, status } : o
+      )
+    );
   };
 
-  // Assign delivery partner
-  const assignDeliveryPartner = (id) => {
+  const assignDeliveryPartner = (order_id) => {
     const name = prompt("Enter Delivery Partner Name:");
-    if (name) {
-      setOrders(orders.map(o => o.id === id ? { ...o, deliveryPartner: name } : o));
+    if (!name) return;
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.order_id === order_id
+          ? { ...o, delivery_partner: name }
+          : o
+      )
+    );
+  };
+
+  // 🔹 VIEW FULL ORDER DETAILS (API CALL)
+  const viewReceipt = async (order) => {
+    try {
+      setDetailsLoading(true);
+      const details = await getOrderDetails(order.order_id);
+      setSelectedOrder(details);
+      setShowReceipt(true);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load order details");
+    } finally {
+      setDetailsLoading(false);
     }
   };
 
-  // Auto-assign delivery partner (mock)
-  const autoAssignPartner = (id) => {
-    const randomPartners = ["Ramesh", "Suresh", "Anil", "Priya", "Neha"];
-    const partner = randomPartners[Math.floor(Math.random() * randomPartners.length)];
-    setOrders(orders.map(o => o.id === id ? { ...o, deliveryPartner: partner } : o));
-  };
-
-  // Cancel order
-  const cancelOrder = (id) => {
-    const reason = prompt("Enter cancellation reason:");
-    if (reason) {
-      setOrders(orders.map(o => o.id === id ? { ...o, status: "Cancelled", cancelReason: reason } : o));
-    }
-  };
-
-  // Trigger refund (mock)
-  const triggerRefund = (id) => {
-    alert(`Refund initiated for order ${id}`);
-  };
-
-  // Reassign merchant
-  const reassignMerchant = (id) => {
-    const merchant = prompt("Enter new merchant name:");
-    if (merchant) {
-      setOrders(orders.map(o => o.id === id ? { ...o, merchant } : o));
-    }
-  };
-
-  // View order receipt
-  const viewReceipt = (order) => {
-    setSelectedOrder(order);
-    setShowReceipt(true);
-  };
-
-  // Reorder (mock)
-  const reorder = (order) => {
-    const newOrder = { ...order, id: uuidv4(), status: "Placed", deliveryPartner: "Not Assigned" };
-    setOrders([newOrder, ...orders]);
-    alert(`Order ${order.id} reordered as ${newOrder.id}`);
-  };
+  if (loading) return <div className="p-6">Loading orders...</div>;
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
 
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Orders Management</h2>
-        <div className="text-sm text-gray-500">{orders.length} orders</div>
-      </div>
+      <h2 className="text-xl font-semibold">
+        Total Orders ({orders.length})
+      </h2>
 
-      <div className="bg-white rounded-2xl shadow overflow-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="p-3 text-left">Order ID</th>
-              <th className="p-3 text-left">Customer</th>
-              <th className="p-3">Merchant</th>
-              <th className="p-3">Delivery Partner</th>
-              <th className="p-3">Amount</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map(o => (
-              <tr key={o.id} className="border-t">
-                <td className="p-3">{o.id}</td>
-                <td className="p-3">{o.customer}</td>
-                <td className="p-3 text-center">{o.merchant}</td>
-                <td className="p-3 text-center">
-                  {o.deliveryPartner}
-                  <div className="flex gap-1 justify-center mt-1">
-                    <button onClick={() => assignDeliveryPartner(o.id)} className="px-1 py-0.5 text-xs bg-yellow-200 rounded">Edit</button>
-                    <button onClick={() => autoAssignPartner(o.id)} className="px-1 py-0.5 text-xs bg-green-200 rounded">Auto</button>
-                  </div>
-                </td>
-                <td className="p-3 text-center">₹{o.amount}</td>
-                <td className="p-3 text-center">
-                  <select
-                    value={o.status}
-                    onChange={(e) => updateStatus(o.id, e.target.value)}
-                    className="border px-1 py-0.5 rounded text-xs"
-                  >
-                    {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </td>
-                <td className="p-3 text-center space-y-1">
-                  <button onClick={() => viewReceipt(o)} className="px-2 py-1 bg-orange-500 text-white rounded text-xs w-full">View</button>
-                  <button onClick={() => cancelOrder(o.id)} className="px-2 py-1 bg-red-100 text-red-600 rounded text-xs w-full">Cancel</button>
-                  <button onClick={() => triggerRefund(o.id)} className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs w-full">Refund</button>
-                  <button onClick={() => reassignMerchant(o.id)} className="px-2 py-1 bg-purple-100 text-purple-600 rounded text-xs w-full">Reassign</button>
-                  <button onClick={() => reorder(o)} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-xs w-full">Reorder</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+     <div className="bg-white rounded-2xl shadow overflow-x-auto">
+  <table className="min-w-full text-sm border-collapse">
+    {/* TABLE HEADER */}
+    <thead className="bg-gray-300 text-gray-700 sticky top-0">
+      <tr>
+        <th className="px-4 py-3 text-center w-16">Sr. No.</th>
+        <th className="px-4 py-3 text-left w-36">Order Code</th>
+        <th className="px-4 py-3 text-left w-44">Customer</th>
+        <th className="px-4 py-3 text-left w-44">Merchant</th>
+        <th className="px-4 py-3 text-left w-48">Delivery Partner</th>
+        <th className="px-4 py-3 text-center w-28">Amount</th>
+        <th className="px-4 py-3 text-center w-40">Status</th>
+        <th className="px-4 py-3 text-center w-24">Actions</th>
+      </tr>
+    </thead>
 
-      {/* Receipt Modal */}
-      {showReceipt && selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-5">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-semibold">Order Receipt ({selectedOrder.id})</h3>
-              <button onClick={() => setShowReceipt(false)} className="text-gray-500">Close</button>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div><strong>Customer:</strong> {selectedOrder.customer}</div>
-              <div><strong>Merchant:</strong> {selectedOrder.merchant}</div>
-              <div><strong>Delivery Partner:</strong> {selectedOrder.deliveryPartner}</div>
-              <div><strong>Status:</strong> {selectedOrder.status}</div>
-              <div className="mt-2"><strong>Items:</strong></div>
-              <ul className="pl-4 list-disc">
-                {selectedOrder.items.map((i, idx) => (
-                  <li key={idx}>{i.name} x{i.qty} - ₹{i.price * i.qty}</li>
-                ))}
-              </ul>
-              <div><strong>Tax:</strong> ₹{selectedOrder.tax}</div>
-              <div><strong>Shipping:</strong> ₹{selectedOrder.shipping}</div>
-              <div className="mt-1 font-bold"><strong>Total:</strong> ₹{selectedOrder.amount}</div>
-              {selectedOrder.cancelReason && <div className="text-red-600"><strong>Cancel Reason:</strong> {selectedOrder.cancelReason}</div>}
-            </div>
+    {/* TABLE BODY */}
+    <tbody className="divide-y">
+      {orders.map((o, index) => (
+        <tr
+          key={o.order_id}
+          className="hover:bg-orange-50 transition"
+        >
+          {/* Sr No */}
+          <td className="px-4 py-3 text-center font-medium text-gray-600">
+            {index + 1}
+          </td>
+
+          {/* Order Code */}
+          <td className="px-4 py-3 font-medium text-gray-800">
+            {o.order_code}
+          </td>
+
+          {/* Customer */}
+          <td className="px-4 py-3 text-gray-700">
+            {o.customer_name}
+          </td>
+
+          {/* Merchant */}
+          <td className="px-4 py-3 text-gray-700">
+            {o.merchant_name}
+          </td>
+
+          {/* Partner */}
+          <td className="px-4 py-3 text-gray-600">
+            {o.delivery_partner || (
+              <span className="text-gray-400 italic">
+                Not Assigned
+              </span>
+            )}
+          </td>
+
+          {/* Amount */}
+          <td className="px-4 py-3 text-center font-semibold">
+            ₹{o.total_amount}
+          </td>
+
+          {/* Status */}
+          <td className="px-4 py-3 text-center">
+            <select
+              value={o.status}
+              onChange={(e) =>
+                updateStatus(o.order_id, e.target.value)
+              }
+              className="border rounded-md px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-orange-400"
+            >
+              {statusOptions.map((s) => (
+                <option key={s} value={s}>
+                  {s.replace(/_/g, " ")}
+                </option>
+              ))}
+            </select>
+          </td>
+
+          {/* Actions */}
+          <td className="px-4 py-3 text-center">
+            <button
+              onClick={() => viewReceipt(o)}
+              className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-xs"
+            >
+              View
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+      {/* 🔹 ORDER DETAILS MODAL */}
+      {showReceipt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-5">
+            {detailsLoading || !selectedOrder ? (
+              <p>Loading details...</p>
+            ) : (
+              <>
+                <h3 className="font-semibold text-lg mb-2">
+                  Order {selectedOrder.order_code}
+                </h3>
+
+                <p className="text-sm mb-1">
+                  <strong>Customer:</strong> {selectedOrder.customer_name}
+                </p>
+                <p className="text-sm mb-1">
+                  <strong>Merchant:</strong> {selectedOrder.merchant_name}
+                </p>
+                <p className="text-sm mb-1">
+                  <strong>Status:</strong> {selectedOrder.status}
+                </p>
+
+                <div className="mt-3">
+                  <strong className="text-sm">Items:</strong>
+                  <ul className="text-sm list-disc pl-5 mt-1">
+                    {selectedOrder.items?.map((item, i) => (
+                      <li key={i}>
+                        {item.name} × {item.quantity} — ₹{item.price}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="text-sm mt-3 space-y-1">
+                  <p>Tax: ₹{selectedOrder.tax_amount}</p>
+                  <p>Shipping: ₹{selectedOrder.shipping_amount}</p>
+                </div>
+
+                <button
+                  onClick={() => setShowReceipt(false)}
+                  className="mt-4 w-full bg-gray-200 py-2 rounded text-sm"
+                >
+                  Close
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -1,33 +1,34 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, UserX, Users, CheckCircle } from "lucide-react";
-
-const dummyCustomers = [
-  {
-    id: 1,
-    name: "Rahul Sharma",
-    phone: "9876543210",
-    totalOrders: 12,
-    loyalty: 240,
-    blocked: false,
-  },
-  {
-    id: 2,
-    name: "Priya Singh",
-    phone: "9932011122",
-    totalOrders: 5,
-    loyalty: 80,
-    blocked: true,
-  },
-];
+import { getCustomerList } from "../../../services/customersApi";
 
 export default function CustomerListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = dummyCustomers.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const list = await getCustomerList();
+        setCustomers(list);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  const filtered = customers.filter((c) =>
+    c.full_name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) return <div>Loading customers...</div>;
 
   return (
     <div className="space-y-4">
@@ -48,44 +49,50 @@ export default function CustomerListPage() {
         />
       </div>
 
-      {/* Customers List */}
+      {/* Customer List */}
       <div className="bg-white rounded-xl shadow divide-y">
         {filtered.map((c) => (
           <div
-            key={c.id}
+            key={c.customer_id}
             className="p-4 flex justify-between items-center hover:bg-gray-50 cursor-pointer"
-            onClick={() => navigate(`/admin/customers/${c.id}`)}
+            onClick={() =>
+              navigate(`/admin/customers/${c.customer_id}`)
+            }
           >
             <div>
-              <div className="font-semibold">{c.name}</div>
-              <div className="text-sm text-gray-500">{c.phone}</div>
+              <div className="font-semibold">{c.full_name}</div>
+              <div className="text-sm text-gray-500">
+                {c.phone}
+              </div>
             </div>
 
             <div className="text-right space-y-1">
-              <div className="text-sm text-gray-600">
-                Orders: <strong>{c.totalOrders}</strong>
-              </div>
               <div className="text-sm">
-                Loyalty: <span className="font-semibold">{c.loyalty}</span>
+                Orders: <strong>{c.total_orders}</strong>
               </div>
+
               <div className="text-sm flex items-center gap-1">
-                Status:{" "}
+                Status:
                 <span
                   className={`font-semibold ${
-                    c.blocked ? "text-red-500" : "text-green-600"
+                    c.is_active
+                      ? "text-green-600"
+                      : "text-red-500"
                   }`}
                 >
-                  {c.blocked ? "Inactive" : "Active"}
+                  {c.is_active ? "Active" : "Inactive"}
                 </span>
               </div>
-              {c.blocked && (
-                <div className="text-red-500 flex items-center mt-1 text-sm">
-                  <UserX size={14} className="mr-1" /> Blocked
+
+              {c.is_active ? (
+                <div className="text-green-500 flex items-center text-sm">
+                  <CheckCircle size={14} className="mr-1" />
+                  Active
                 </div>
-              )}
-              {!c.blocked && (
-                <div className="text-green-500 flex items-center mt-1 text-sm">
-                  <CheckCircle size={14} className="mr-1" /> Active
+              ) : (
+                <div className="text-red-500 flex items-center text-sm">
+                  <UserX size={14} className="mr-1" />
+                  Blocked
                 </div>
               )}
             </div>

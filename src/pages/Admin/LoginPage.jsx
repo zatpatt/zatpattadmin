@@ -2,29 +2,55 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, User } from "lucide-react";
+import { supabase } from "../../supabaseClient"; // ✅ FIXED IMPORT PATH
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setErrorMsg("");
 
-    // ✨ TEMP LOGIN CHECK (Replace later with Firebase Auth)
-    if (email === "admin@example.com" && password === "admin123") {
-      navigate("/admin");
-    } else {
-      alert("Invalid login credentials");
+    try {
+      // 1️⃣ Supabase Email Login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setErrorMsg(error.message);
+        return;
+      }
+
+      const user = data.user;
+
+      // 2️⃣ Check if this user is ADMIN
+      const role = user.user_metadata?.role;
+
+      if (role !== "admin") {
+        // prevent access
+        setErrorMsg("Access denied. Not an admin.");
+        await supabase.auth.signOut();
+        return;
+      }
+
+      // 3️⃣ If admin → navigate
+      navigate("/admin/dashboard");
+    } catch (err) {
+      setErrorMsg("Something went wrong. Try again.");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fff8f2] px-6">
-      
       {/* Card */}
       <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-orange-200">
-        
+
         {/* Logo + Title */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">
@@ -70,6 +96,11 @@ export default function LoginPage() {
               />
             </div>
           </div>
+
+          {/* Error Message */}
+          {errorMsg && (
+            <p className="text-red-500 text-center text-sm">{errorMsg}</p>
+          )}
 
           {/* Login Button */}
           <button

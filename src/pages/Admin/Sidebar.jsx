@@ -7,11 +7,19 @@ export default function Sidebar({ sidebarOpen }) {
 
   const isCustomerActive = pathname.startsWith("/admin/customers");
 
+  const isDarkStoresActive = pathname.startsWith("/admin/dark-stores");
+  const isPincodeActive = pathname.startsWith("/admin/pincodes");
+
   const menu = [
     { name: "📊 Dashboard", path: "/admin" },
     { name: "🛍️ Orders", path: "/admin/orders" },
     { name: "👥 Customers", path: "/admin/customers", active: isCustomerActive },
     { name: "🏪 Merchants", path: "/admin/merchants" },
+
+  // 🆕 Dark store section
+    { name: "🏬 Dark Stores", path: "/admin/dark-stores", active: isDarkStoresActive },
+    { name: "📮 Pincode Mapping", path: "/admin/pincodes", active: isPincodeActive },
+
     { name: "🚴 Delivery Partners", path: "/admin/delivery" },
     { name: "🍔 Menu Moderation", path: "/admin/menu" },
     { name: "💸 Finance", path: "/admin/finance" },
@@ -23,14 +31,15 @@ export default function Sidebar({ sidebarOpen }) {
   ];
 
   return (
-    <div
-      className={`bg-white shadow-lg h-full transition-all duration-300 
-        ${sidebarOpen ? "w-64" : "w-0 overflow-hidden"}
-      `}
-    >
+  <div
+  className={`bg-white shadow-lg h-screen flex flex-col transition-all duration-300
+    ${sidebarOpen ? "w-64" : "w-0 overflow-hidden"}
+  `}
+>
+
       <div className="p-5 text-xl font-bold border-b">Admin Panel</div>
 
-      <nav className="mt-4">
+     <nav className="mt-4 overflow-y-auto flex-1">
         {menu.map((item) => {
           const active = item.active || pathname === item.path;
           return (
