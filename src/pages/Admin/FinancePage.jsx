@@ -56,11 +56,13 @@ const MERCHANT_REQUESTS = [
 ];
 
 const DP_PAYOUTS = [
-  { id: 21, name: "Ravi Kumar", amount: 8200, period: "Monthly", status: "Paid" },
+  { id: 21, name: "Ravi Kumar", amount: 8200, period: "Monthly", date: "2025-02-10" },
+  { id: 22, name: "Amit Patil", amount: 6500, period: "Weekly", date: "2025-02-14" },
 ];
 
 const MERCHANT_PAYOUTS = [
-  { id: 31, name: "Coffee House", amount: 15400, period: "Monthly", status: "Paid" },
+  { id: 31, name: "Coffee House", amount: 15400, period: "Monthly", date: "2025-02-09" },
+  { id: 32, name: "Sweet Tooth", amount: 8200, period: "Weekly", date: "2025-02-15" },
 ];
 
 /* ---------------- CSV EXPORT ---------------- */
@@ -88,6 +90,17 @@ export default function FinancePage() {
   const [search, setSearch] = useState("");
   const [expandedPartner, setExpandedPartner] = useState(null);
 
+  const [approvedDpRequests, setApprovedDpRequests] = useState([]);
+  const [rejectedDpRequests, setRejectedDpRequests] = useState([]);
+  const [paidDpRequests, setPaidDpRequests] = useState([]);
+
+  const [approvedMerchantRequests, setApprovedMerchantRequests] = useState([]);
+  const [rejectedMerchantRequests, setRejectedMerchantRequests] = useState([]);
+  const [paidMerchantRequests, setPaidMerchantRequests] = useState([]);
+
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
   const [dpRequests, setDpRequests] = useState(DP_REQUESTS);
   const [merchantRequests, setMerchantRequests] = useState(MERCHANT_REQUESTS);
 
@@ -104,6 +117,26 @@ export default function FinancePage() {
     });
     return map;
   }, []);
+
+const filterByDateRange = (list) => {
+  if (!fromDate && !toDate) return list;
+
+  return list.filter((item) => {
+    if (!item.date) return false;
+
+    const itemDate = new Date(item.date);
+
+    const from = fromDate ? new Date(fromDate) : null;
+    const to = toDate ? new Date(toDate) : null;
+
+    if (to) to.setHours(23, 59, 59, 999);
+
+    if (from && itemDate < from) return false;
+    if (to && itemDate > to) return false;
+
+    return true;
+  });
+};
 
   /* ---------------- SUMMARY CARDS ---------------- */
   const summary = useMemo(() => {
@@ -210,8 +243,7 @@ export default function FinancePage() {
         </button>
       </div>
 
-      {/* ================= ORDER FINANCIALS (FIXED) ================= */}
-     {/* ================= ORDER FINANCIALS ================= */}
+   {/* ================= ORDER FINANCIALS ================= */}
       {activeTab === "order_financials" && (
         <div className="bg-white rounded-2xl shadow p-4 space-y-4">
 
@@ -271,69 +303,212 @@ export default function FinancePage() {
         </div>
       )}
       
-      {/* DP REQUESTS */}
-      {activeTab === "dp_requests" && (
-        <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-          {filterBySearch(dpRequests).map(r => (
-            <div key={r.id} className="flex justify-between items-center border-b py-2">
-              <div>{r.name} • {r.type} • ₹{r.amount}</div>
-              <div className="flex gap-2">
-                {r.status === "Pending" && (
-                  <>
-                    <button onClick={() => approveRequest(r.id, "dp")} className="text-green-600"><CheckCircle /></button>
-                    <button onClick={() => rejectRequest(r.id, "dp")} className="text-red-600"><XCircle /></button>
-                  </>
-                )}
-                <span>{r.status}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+   {/* DP REQUESTS */}
+{activeTab === "dp_requests" && (
+  <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+    {filterBySearch(dpRequests).map((r) => {
+      const isApproved = approvedDpRequests.includes(r.id);
+      const isRejected = rejectedDpRequests.includes(r.id);
+      const isPaid = paidDpRequests.includes(r.id);
 
-      {/* MERCHANT REQUESTS */}
-      {activeTab === "merchant_requests" && (
-        <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-          {filterBySearch(merchantRequests).map(r => (
-            <div key={r.id} className="flex justify-between items-center border-b py-2">
-              <div>{r.name} • {r.type} • ₹{r.amount}</div>
-              <div className="flex gap-2">
-                {r.status === "Pending" && (
-                  <>
-                    <button onClick={() => approveRequest(r.id, "merchant")} className="text-green-600"><CheckCircle /></button>
-                    <button onClick={() => rejectRequest(r.id, "merchant")} className="text-red-600"><XCircle /></button>
-                  </>
-                )}
-                <span>{r.status}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      return (
+        <div
+          key={r.id}
+          className="flex justify-between items-center border-b py-2"
+        >
+          <div>
+            {r.name} • {r.type} • ₹{r.amount}
+          </div>
 
-      {/* DP PAYOUTS */}
-      {activeTab === "dp_payouts" && (
-        <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-          {filterBySearch(DP_PAYOUTS).map(p => (
-            <div key={p.id} className="flex justify-between border-b py-2">
-              <div>{p.name} • {p.period}</div>
-              <div className="text-green-600 font-medium">₹{p.amount}</div>
-            </div>
-          ))}
-        </div>
-      )}
+          <div className="flex items-center gap-2">
+            {/* APPROVE */}
+            {!isApproved && !isRejected && (
+              <button
+                onClick={() =>
+                  setApprovedDpRequests((prev) => [...prev, r.id])
+                }
+                className="p-2 rounded bg-orange-100 text-orange-600"
+                title="Approve"
+              >
+                <CheckCircle size={18} />
+              </button>
+            )}
 
-      {/* MERCHANT PAYOUTS */}
-      {activeTab === "merchant_payouts" && (
-        <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-          {filterBySearch(MERCHANT_PAYOUTS).map(p => (
-            <div key={p.id} className="flex justify-between border-b py-2">
-              <div>{p.name} • {p.period}</div>
-              <div className="text-green-600 font-medium">₹{p.amount}</div>
-            </div>
-          ))}
+            {/* REJECT */}
+            {!isApproved && !isRejected && (
+              <button
+                onClick={() =>
+                  setRejectedDpRequests((prev) => [...prev, r.id])
+                }
+                className="p-2 rounded bg-red-100 text-red-600"
+                title="Reject"
+              >
+                <XCircle size={18} />
+              </button>
+            )}
+
+            {/* MARK AS PAID */}
+            {isApproved && !isPaid && (
+              <button
+                onClick={() =>
+                  setPaidDpRequests((prev) => [...prev, r.id])
+                }
+                className="bg-orange-500 text-white px-3 py-1 rounded text-sm"
+              >
+                Mark as Paid
+              </button>
+            )}
+
+            {/* FINAL STATE */}
+            {isPaid && (
+              <span className="text-green-600 font-semibold">
+                ✓ Paid
+              </span>
+            )}
+
+            {isRejected && (
+              <span className="text-red-600 font-semibold">
+                ✕ Rejected
+              </span>
+            )}
+          </div>
         </div>
-      )}
+      );
+    })}
+  </div>
+)}
+
+ {/* MERCHANT REQUESTS */}
+{activeTab === "merchant_requests" && (
+  <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+    {filterBySearch(merchantRequests).map((r) => {
+      const isApproved = approvedMerchantRequests.includes(r.id);
+      const isRejected = rejectedMerchantRequests.includes(r.id);
+      const isPaid = paidMerchantRequests.includes(r.id);
+
+      return (
+        <div
+          key={r.id}
+          className="flex justify-between items-center border-b py-2"
+        >
+          <div>
+            {r.name} • {r.type} • ₹{r.amount}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* APPROVE */}
+            {!isApproved && !isRejected && (
+              <button
+                onClick={() =>
+                  setApprovedMerchantRequests((prev) => [...prev, r.id])
+                }
+                className="p-2 rounded bg-orange-100 text-orange-600"
+                title="Approve"
+              >
+                <CheckCircle size={18} />
+              </button>
+            )}
+
+            {/* REJECT */}
+            {!isApproved && !isRejected && (
+              <button
+                onClick={() =>
+                  setRejectedMerchantRequests((prev) => [...prev, r.id])
+                }
+                className="p-2 rounded bg-red-100 text-red-600"
+                title="Reject"
+              >
+                <XCircle size={18} />
+              </button>
+            )}
+
+            {/* MARK AS PAID */}
+            {isApproved && !isPaid && (
+              <button
+                onClick={() =>
+                  setPaidMerchantRequests((prev) => [...prev, r.id])
+                }
+                className="bg-orange-500 text-white px-3 py-1 rounded text-sm"
+              >
+                Mark as Paid
+              </button>
+            )}
+
+            {/* FINAL STATE */}
+            {isPaid && (
+              <span className="text-green-600 font-semibold">
+                ✓ Paid
+              </span>
+            )}
+
+            {isRejected && (
+              <span className="text-red-600 font-semibold">
+                ✕ Rejected
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
+
+{/* DELIVERY PARTNER PAYOUTS */}
+ {(activeTab === "dp_payouts" || activeTab === "merchant_payouts") && (
+  <div className="bg-white p-4 rounded-xl shadow flex gap-3 items-center">
+    <div>
+      <label className="text-xs text-gray-500">From</label>
+      <input
+        type="date"
+        value={fromDate}
+        onChange={(e) => setFromDate(e.target.value)}
+        className="border px-2 py-1 rounded text-sm"
+      />
     </div>
+
+    <div>
+      <label className="text-xs text-gray-500">To</label>
+      <input
+        type="date"
+        value={toDate}
+        onChange={(e) => setToDate(e.target.value)}
+        className="border px-2 py-1 rounded text-sm"
+      />
+    </div>
+
+    <button
+      onClick={() => {
+        setFromDate("");
+        setToDate("");
+      }}
+      className="ml-auto text-sm text-blue-600"
+    >
+      Clear
+    </button>
+  </div>
+)}
+
+{/* MERCHANT PAYOUTS */}
+{activeTab === "merchant_payouts" && (
+  <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+    {filterByDateRange(filterBySearch(MERCHANT_PAYOUTS)).map((p) => (
+      <div
+        key={p.id}
+        className="flex justify-between border-b py-2"
+      >
+        <div>
+          {p.name} • {p.period}
+          <div className="text-xs text-gray-500">
+            {new Date(p.date).toLocaleDateString()}
+          </div>
+        </div>
+        <div className="text-green-600 font-medium">
+          ₹{p.amount}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+  </div>
   );
 }

@@ -51,31 +51,7 @@ export default function MerchantsPage() {
       prev.map((m) => (m.id === id ? { ...m, status: "rejected" } : m))
     );
 
-  const toggleBlock = (id) =>
-    setMerchants((prev) =>
-      prev.map((m) =>
-        m.id === id ? { ...m, blocked: !m.blocked } : m
-      )
-    );
-
-  const setCommission = (id) => {
-    const c = prompt("Enter commission % (number):");
-    if (!c) return;
-    setMerchants((prev) =>
-      prev.map((m) =>
-        m.id === id ? { ...m, commission: Number(c) } : m
-      )
-    );
-  };
-
-  const viewKYC = (m) =>
-    alert(
-      `GST: ${m.gst || "N/A"}\nFSSAI: ${m.fssai || "N/A"}\nPAN: ${
-        m.pan || "N/A"
-      }`
-    );
-
-  const getProfileImage = (m) =>
+   const getProfileImage = (m) =>
     m.shopImages?.length
       ? m.shopImages[0]
       : "https://via.placeholder.com/40?text=🏪";
@@ -184,27 +160,7 @@ export default function MerchantsPage() {
                       Reject
                     </button>
                   )}
-
-                  <button
-                    onClick={() => setCommission(m.id)}
-                    className="px-2 py-1 rounded bg-amber-400 text-white text-xs"
-                  >
-                    Commission
-                  </button>
-
-                  <button
-                    onClick={() => toggleBlock(m.id)}
-                    className="px-2 py-1 rounded bg-gray-200 text-red-600 text-xs"
-                  >
-                    {m.blocked ? "Unblock" : "Block"}
-                  </button>
-
-                  <button
-                    onClick={() => viewKYC(m)}
-                    className="px-2 py-1 rounded bg-blue-500 text-white text-xs"
-                  >
-                    KYC
-                  </button>
+               
                 </td>
               </tr>
             ))}

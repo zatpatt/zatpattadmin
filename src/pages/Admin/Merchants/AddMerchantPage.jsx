@@ -45,59 +45,65 @@ export default function AddMerchantPage() {
     }));
   };
 
-  const save = async () => {
-    if (!form.name || !form.owner_name || !form.phone) {
-      return alert("Please fill Store name, Owner name and Phone");
-    }
+ const save = async () => {
+  if (!form.name || !form.owner_name || !form.phone) {
+    return alert("Please fill Store name, Owner name and Phone");
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const payload = {
-        name: form.name,
-        phone: form.phone,
-        owner_name: form.owner_name,
-        email: form.email || null,
-        address: form.address || "",
-        city: form.city || "",
-        state: form.state || "",
-        pincode: form.pincode || "",
-        category: form.category || null,
+    const payload = {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      owner_name: form.owner_name.trim(),
 
-        is_verified: true,
-        commission_type: "percentage",
-        commission_value: form.commission_value
-          ? form.commission_value.endsWith("%")
-            ? form.commission_value
-            : `${form.commission_value}%`
-          : "0%",
+      email: form.email || null,
+      address: form.address || "",
+      city: form.city || "",
+      state: form.state || "",
+      pincode: form.pincode ? Number(form.pincode) : null,
+      category: form.category || null,
 
-        gst_number: form.gst_number || "",
-        fssai_number: form.fssai_number || "",
-        pan_number: form.pan_number || "",
+      commission_type: "percentage",
+      commission_value: form.commission_value
+        ? Number(form.commission_value)
+        : 0,
 
-        // ✅ FINAL WORKING HOURS PAYLOAD
-        working_hrs: form.working_hrs.map((w) => ({
-          day: w.day,
-          opening_time: `${w.opening_time}:00`,
-          closing_time: `${w.closing_time}:00`,
-        })),
-      };
+      gst_number: form.gst_number || "",
+      fssai_number: form.fssai_number || "",
+      pan_number: form.pan_number || "",
 
-      await addMerchant(payload);
+      is_verified: true,
+      is_active: true,
+      is_blocked: false,
 
-      alert("Merchant added successfully");
-      window.location.href = "/admin/merchants";
-    } catch (err) {
-      console.error("ADD MERCHANT ERROR:", err.response?.data || err);
-      alert(
-        err.response?.data?.message ||
-          "Failed to add merchant. Check backend logs."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+      working_hrs: form.working_hrs.map((w) => ({
+        day: Number(w.day),
+        opening_time: `${w.opening_time}:00`.slice(0, 8),
+        closing_time: `${w.closing_time}:00`.slice(0, 8),
+      })),
+    };
+
+    console.log("ADD MERCHANT PAYLOAD →", payload);
+
+    await addMerchant(payload);
+
+    alert("Merchant added successfully");
+    window.location.href = "/admin/merchants";
+  } catch (err) {
+    console.error("ADD MERCHANT ERROR:", err?.response?.data || err);
+
+    alert(
+      err?.response?.data?.message ||
+        JSON.stringify(err?.response?.data) ||
+        "Failed to add merchant"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="max-w-3xl mx-auto p-4">
