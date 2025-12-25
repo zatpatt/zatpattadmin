@@ -29,21 +29,26 @@ import AnalyticsPage from "./AnalyticsPage"; // <-- add this
 import SupportTicketsPage from "./SupportTicketsPage"; // <-- import SupportTicketsPage
 
 /* === DARK STORE CONTEXT === */
-import { DarkStoreProvider } from "./DarkStore/DarkStoreContext";
+// import { DarkStoreProvider } from "./DarkStore/DarkStoreContext";
 
 /* === DARK STORE PAGES === */
-import DarkStoreInventoryPage from "./DarkStore/DarkStoreInventoryPage";
-import PickingPackingPage from "./DarkStore/PickingPackingPage";
-import DarkStoreAnalytics from "./DarkStore/DarkStoreAnalytics";
-import DarkStoresPage from "./DarkStore/DarkStoresPage";
-import CreateDarkStorePage from "./DarkStore/CreateDarkStorePage";
-import DarkStoreDetailPage from "./DarkStore/DarkStoreDetailPage";
-import PincodeStoreMappingPage from "./DarkStore/PincodeStoreMappingPage"
+// import DarkStoreInventoryPage from "./DarkStore/DarkStoreInventoryPage";
+// import PickingPackingPage from "./DarkStore/PickingPackingPage";
+// import DarkStoreAnalytics from "./DarkStore/DarkStoreAnalytics";
+// import DarkStoresPage from "./DarkStore/DarkStoresPage";
+// import CreateDarkStorePage from "./DarkStore/CreateDarkStorePage";
+// import DarkStoreDetailPage from "./DarkStore/DarkStoreDetailPage";
+//import PincodeStoreMappingPage from "./DarkStore/PincodeStoreMappingPage"
+
+// Darkstore pages
+import DarkstoreListPage from "./DarkStore/DarkstoreListPage";
+import DarkstoreProductsPage from "./DarkStore/DarkstoreProductsPage";
+import AddDarkstorePage from "./DarkStore/AddDarkstorePage";
 
 export default function AdminRoutes() {
   return (
     <AdminLayout>
-      <DarkStoreProvider>
+      {/* <DarkStoreProvider> */}
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="orders" element={<OrdersPage />} />
@@ -67,15 +72,18 @@ export default function AdminRoutes() {
         <Route path="/system" element={<SystemPage />} /> {/* THIS */}
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="support" element={<SupportTicketsPage />} />
-        <Route path="dark-stores" element={<DarkStoresPage />} />
+        {/* <Route path="dark-stores" element={<DarkStoresPage />} />
         <Route path="dark-stores/new" element={<CreateDarkStorePage />} />
         <Route path="dark-stores/:storeId" element={<DarkStoreDetailPage />} />
         <Route path="pincodes" element={<PincodeStoreMappingPage />} />
         <Route path="dark-stores/analytics" element={<DarkStoreAnalytics />} />
         <Route path="dark-stores/:storeId/picking" element={<PickingPackingPage />} />
-        <Route path="dark-stores/:storeId/inventory" element={<DarkStoreInventoryPage />} />
+        <Route path="dark-stores/:storeId/inventory" element={<DarkStoreInventoryPage />} /> */}
+        <Route path="darkstores" element={<DarkstoreListPage />} /> 
+        <Route path="darkstores/:storeId/products" element={<DarkstoreProductsPage />} />
+        <Route path="darkstores/new" element={<AddDarkstorePage />} />
       </Routes>
-      </DarkStoreProvider>
+      {/* </DarkStoreProvider> */}
     </AdminLayout>
   );
 }

@@ -7,8 +7,11 @@ export default function Sidebar({ sidebarOpen }) {
 
   const isCustomerActive = pathname.startsWith("/admin/customers");
 
-  const isDarkStoresActive = pathname.startsWith("/admin/dark-stores");
+  //const isDarkStoresActive = pathname.startsWith("/admin/dark-stores");
   const isPincodeActive = pathname.startsWith("/admin/pincodes");
+
+  // Current darkstore
+  const isDarkStoresActive = pathname.startsWith("/admin/darkstores");
 
   const menu = [
     { name: "📊 Dashboard", path: "/admin" },
@@ -17,8 +20,11 @@ export default function Sidebar({ sidebarOpen }) {
     { name: "🏪 Merchants", path: "/admin/merchants" },
 
   // 🆕 Dark store section
-    { name: "🏬 Dark Stores", path: "/admin/dark-stores", active: isDarkStoresActive },
-    { name: "📮 Pincode Mapping", path: "/admin/pincodes", active: isPincodeActive },
+    //{ name: "🏬 Dark Stores", path: "/admin/dark-stores", active: isDarkStoresActive },
+   // { name: "📮 Pincode Mapping", path: "/admin/pincodes", active: isPincodeActive },
+
+    // Current darkstore
+    { name: "🏬 Darkstores", path: "/admin/darkstores", active: isDarkStoresActive },
 
     { name: "🚴 Delivery Partners", path: "/admin/delivery" },
     { name: "🍔 Menu Moderation", path: "/admin/menu" },

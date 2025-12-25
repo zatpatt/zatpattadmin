@@ -1,93 +1,74 @@
-// src/pages/Admin/DarkStore/DarkStoresPage.jsx
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+// // src/pages/Admin/DarkStore/DarkStoresPage.jsx
+// import React, { useState } from "react";
+// import { useNavigate } from "react-router-dom";
 
-const MOCK_STORES = [
-  {
-    id: "DS001",
-    name: "Zatpatt Dark Store - Andheri",
-    city: "Mumbai",
-    pincodeCount: 12,
-    status: "Active",
-    capacity: "High",
-  },
-  {
-    id: "DS002",
-    name: "Zatpatt Dark Store - Thane",
-    city: "Thane",
-    pincodeCount: 8,
-    status: "Active",
-    capacity: "Medium",
-  },
-];
+// const MOCK_STORES = [
+//   {
+//     id: "DS001",
+//     name: "Zatpatt Darkstore - Andheri",
+//     city: "Mumbai",
+//     is_active: true,
+//     pincodes: 12,
+//   },
+// ];
 
-export default function DarkStoresPage() {
-  const [stores] = useState(MOCK_STORES);
-  const navigate = useNavigate();
+// export default function DarkStoresPage() {
+//   const navigate = useNavigate();
+//   const [stores] = useState(MOCK_STORES);
 
-  return (
-    <div className="p-4 max-w-6xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dark Stores</h1>
-        <button
-          className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-semibold shadow"
-          onClick={() => alert("In future: open Add Dark Store form")}
-        >
-          + Add Dark Store
-        </button>
-      </div>
+//   return (
+//     <div className="p-6 max-w-6xl mx-auto space-y-4">
+//       <div className="flex justify-between items-center">
+//         <h1 className="text-2xl font-bold">Darkstores</h1>
+//         <button
+//           onClick={() => navigate("/admin/dark-stores/create")}
+//           className="bg-orange-500 text-white px-4 py-2 rounded-xl"
+//         >
+//           + Add Darkstore
+//         </button>
+//       </div>
 
-      <div className="bg-white rounded-2xl shadow p-4">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-gray-500 border-b">
-              <th className="py-2">Store ID</th>
-              <th className="py-2">Name</th>
-              <th className="py-2">City</th>
-              <th className="py-2">Pincodes</th>
-              <th className="py-2">Capacity</th>
-              <th className="py-2">Status</th>
-              <th className="py-2 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stores.map((store) => (
-              <tr key={store.id} className="border-b last:border-none">
-                <td className="py-2">{store.id}</td>
-                <td className="py-2">{store.name}</td>
-                <td className="py-2">{store.city}</td>
-                <td className="py-2">{store.pincodeCount}</td>
-                <td className="py-2">{store.capacity}</td>
-                <td className="py-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      store.status === "Active"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {store.status}
-                  </span>
-                </td>
-                <td className="py-2 text-right">
-                  <button
-                    className="text-orange-600 text-xs font-medium"
-                    onClick={() => navigate(`/admin/dark-stores/${store.id}`)}
-                  >
-                    View / Edit →
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {stores.length === 0 && (
-          <p className="text-center text-gray-500 text-sm py-6">
-            No dark stores yet. Click "Add Dark Store" to create your first one.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
+//       <div className="bg-white rounded-xl shadow">
+//         <table className="w-full text-sm">
+//           <thead className="border-b text-gray-500">
+//             <tr>
+//               <th className="p-3">ID</th>
+//               <th>Name</th>
+//               <th>City</th>
+//               <th>Status</th>
+//               <th className="text-right p-3">Action</th>
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {stores.map((s) => (
+//               <tr key={s.id} className="border-b">
+//                 <td className="p-3">{s.id}</td>
+//                 <td>{s.name}</td>
+//                 <td>{s.city}</td>
+//                 <td>
+//                   <span
+//                     className={`px-2 py-1 rounded-full text-xs ${
+//                       s.is_active
+//                         ? "bg-green-100 text-green-700"
+//                         : "bg-gray-100 text-gray-500"
+//                     }`}
+//                   >
+//                     {s.is_active ? "Active" : "Inactive"}
+//                   </span>
+//                 </td>
+//                 <td className="p-3 text-right">
+//                   <button
+//                     onClick={() => navigate(`/admin/dark-stores/${s.id}`)}
+//                     className="text-orange-600 text-xs"
+//                   >
+//                     Manage →
+//                   </button>
+//                 </td>
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+//       </div>
+//     </div>
+//   );
+// }

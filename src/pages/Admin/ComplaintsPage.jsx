@@ -1,19 +1,14 @@
 // src/pages/Admin/ComplaintsPage.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { User, Truck, Coffee, CheckCircle, XCircle } from "lucide-react";
-
-// Dummy complaint data
-const dummyComplaints = [
-  { id: 201, type: "Customer", name: "Rahul Sharma", issue: "Late delivery", assignedTo: "Support Team", status: "Open", date: "2025-11-15" },
-  { id: 202, type: "Merchant", name: "Coffee House", issue: "Item not received", assignedTo: "Support Team", status: "Resolved", date: "2025-11-14" },
-  { id: 203, type: "Delivery Partner", name: "Ravi Kumar", issue: "Order cancelled", assignedTo: "Support Team", status: "Open", date: "2025-11-13" },
-  { id: 204, type: "Customer", name: "Priya Singh", issue: "Wrong item delivered", assignedTo: "Agent John", status: "Open", date: "2025-11-12" },
-];
+import { getComplaints } from "../../services/complaintsApi";
 
 export default function ComplaintsPage() {
-  const [complaints, setComplaints] = useState(dummyComplaints);
+
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Filter complaints based on type and status
   const filteredComplaints = useMemo(() => {
@@ -35,6 +30,41 @@ export default function ComplaintsPage() {
   const closeComplaint = (id) => {
     setComplaints(complaints.map(c => c.id === id ? { ...c, status: "Resolved" } : c));
   };
+
+  useEffect(() => {
+  setLoading(true);
+
+  getComplaints()
+    .then((data) => {
+      /**
+       * Transform backend data → UI-friendly format
+       */
+      const formatted = data.map((c, index) => ({
+        id: index + 1, // frontend-only ID
+        type:
+          c.user_type === "customer"
+            ? "Customer"
+            : c.user_type === "merchant"
+            ? "Merchant"
+            : "Delivery Partner",
+        name:
+          c.customer_name ||
+          c.merchant_name ||
+          c.delivery_partner ||
+          "Unknown",
+        issue: c.complaint_note,
+        assignedTo: "Support Team", // backend not provided yet
+        status: "Open", // backend not provided yet
+        date: new Date(c.created_on).toLocaleDateString(),
+      }));
+
+      setComplaints(formatted);
+    })
+    .catch(() => {
+      setComplaints([]);
+    })
+    .finally(() => setLoading(false));
+}, []);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -83,6 +113,13 @@ export default function ComplaintsPage() {
             {filteredComplaints.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-3 py-4 text-center text-gray-500">No complaints found</td>
+              </tr>
+            )}
+            {loading && (
+              <tr>
+                <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
+                  Loading complaints...
+                </td>
               </tr>
             )}
             {filteredComplaints.map(c => (

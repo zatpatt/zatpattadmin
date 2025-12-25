@@ -57,14 +57,12 @@ export default function MerchantDetailPage() {
         day: w.day,
         opening_time: w.opening_time,
         closing_time: w.closing_time,
-        is_closed: false,        // UI only
-      }))
+          }))
     : DAYS.map((d) => ({
         day: d.day,
         opening_time: "09:00:00",
         closing_time: "21:00:00",
-        is_closed: false,
-        })),
+                })),
 
 
         });
@@ -91,17 +89,24 @@ export default function MerchantDetailPage() {
   }));
 };
 
-// 🏷️ CATEGORY CHOICES (CHOICE-BASED)
 const CATEGORY_CHOICES = [
-  { value: "grocery", label: "Grocery Store" },
+  { value: "grocery", label: "Grocery" },
+  { value: "electronics", label: "Electronics" },
+  { value: "clothing", label: "Clothing" },
   { value: "restaurant", label: "Restaurant" },
-  { value: "bakery", label: "Bakery" },
   { value: "pharmacy", label: "Pharmacy" },
-  { value: "flowers", label: "Flowers" },
-  { value: "meat", label: "Meat & Fish" },
-  { value: "beverages", label: "Beverages" },
+  { value: "furniture", label: "Furniture" },
+  { value: "books", label: "Books & Stationery" },
+  { value: "beauty", label: "Beauty & Personal Care" },
+  { value: "sports", label: "Sports & Fitness" },
+  { value: "jewelry", label: "Jewelry & Accessories" },
+  { value: "toys", label: "Toys & Kids" },
+  { value: "pet_supplies", label: "Pet Supplies" },
+  { value: "automotive", label: "Automotive" },
+  { value: "home_appliances", label: "Home Appliances" },
+  { value: "flowers", label: "Flowers & Gifts" },
+  { value: "handicrafts", label: "Handicrafts & Art" },
 ];
-
 
   /* ---------------- SAVE ---------------- */
 const saveChanges = async () => {

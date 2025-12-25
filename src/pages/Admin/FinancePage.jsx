@@ -1,4 +1,18 @@
-import React, { useMemo, useState } from "react";
+//src\pages\Admin\FinancePage.jsx
+
+import React, { useMemo, useState, useEffect } from "react";
+import {
+  getDeliveryPartnerPayout,
+  getDeliveryPartnerPaymentRequests,
+  updatePartnerPaymentRequest,
+  updatePartnerPaymentProcess,
+  getMerchantPayout,
+  getMerchantPaymentRequests,
+  updateMerchantPaymentRequest,
+  updateMerchantPaymentProcess,
+  getCollectionFromDeliveryPartner,
+  updateCollectionStatus,
+} from "../../services/financeApi";
 import {
   Search,
   CheckCircle,
@@ -65,6 +79,7 @@ const MERCHANT_PAYOUTS = [
   { id: 32, name: "Sweet Tooth", amount: 8200, period: "Weekly", date: "2025-02-15" },
 ];
 
+
 /* ---------------- CSV EXPORT ---------------- */
 const exportCSV = (filename, rows) => {
   if (!rows.length) return alert("No data to export");
@@ -90,6 +105,9 @@ export default function FinancePage() {
   const [search, setSearch] = useState("");
   const [expandedPartner, setExpandedPartner] = useState(null);
 
+  const [dpRequestApiData, setDpRequestApiData] = useState([]);
+  const [loadingDpRequests, setLoadingDpRequests] = useState(false);
+
   const [approvedDpRequests, setApprovedDpRequests] = useState([]);
   const [rejectedDpRequests, setRejectedDpRequests] = useState([]);
   const [paidDpRequests, setPaidDpRequests] = useState([]);
@@ -104,19 +122,46 @@ export default function FinancePage() {
   const [dpRequests, setDpRequests] = useState(DP_REQUESTS);
   const [merchantRequests, setMerchantRequests] = useState(MERCHANT_REQUESTS);
 
+  const [dpPayoutApiData, setDpPayoutApiData] = useState([]);
+  const [loadingDpPayouts, setLoadingDpPayouts] = useState(false);
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentContext, setPaymentContext] = useState(null); 
+    // { type: "dp" | "merchant", requestId, name, amount }
+
+  const [paymentMode, setPaymentMode] = useState("");
+  const [transactionId, setTransactionId] = useState("");
+
+  const [merchantRequestApiData, setMerchantRequestApiData] = useState([]);
+  const [merchantPayoutApiData, setMerchantPayoutApiData] = useState([]);
+  const [loadingmerchantRequests, setLoadingmerchantRequests] = useState(false);
+  const [loadingmerchantPayout, setLoadingmerchantPayout] = useState(false);
+
+  const [dpCollectionApiData, setDpCollectionApiData] = useState([]);
+  const [loadingCollections, setLoadingCollections] = useState(false);
+
+  const [showCollectModal, setShowCollectModal] = useState(false);
+  const [collectContext, setCollectContext] = useState(null);
+  // { delivery_id, amount }
+
+  
   /* ---------------- GROUP BY DELIVERY PARTNER ---------------- */
-  const groupedByPartner = useMemo(() => {
-    const map = {};
-    ORDER_FINANCIALS.forEach(o => {
-      const totalPaid = o.order_value + o.delivery_charge;
-      if (!map[o.partner]) {
-        map[o.partner] = { orders: [], total: 0 };
-      }
-      map[o.partner].orders.push({ ...o, totalPaid });
-      map[o.partner].total += totalPaid;
-    });
-    return map;
-  }, []);
+  // const groupedByPartner = useMemo(() => {
+  //   const map = {};
+  //   ORDER_FINANCIALS.forEach(o => {
+  //     const totalPaid = o.order_value + o.delivery_charge;
+  //     if (!map[o.partner]) {
+  //       map[o.partner] = { orders: [], total: 0 };
+  //     }
+  //     map[o.partner].orders.push({ ...o, totalPaid });
+  //     map[o.partner].total += totalPaid;
+  //   });
+  //   return map;
+  // }, []);
+
+  const isSubmitDisabled =
+  !paymentMode ||
+  (paymentMode === "upi" && !transactionId.trim());
 
 const filterByDateRange = (list) => {
   if (!fromDate && !toDate) return list;
@@ -138,22 +183,79 @@ const filterByDateRange = (list) => {
   });
 };
 
+const openPaymentPopup = (ctx) => {
+  setPaymentContext(ctx);
+  setPaymentMode("");
+  setTransactionId("");
+  setShowPaymentModal(true);
+};
+
+const closePaymentPopup = () => {
+  setShowPaymentModal(false);
+  setPaymentContext(null);
+  setPaymentMode("");
+  setTransactionId("");
+};
+
+const submitPayment = () => {
+  
+  if (paymentContext?.type === "dp") {
+    updatePartnerPaymentProcess({
+      payment_id: paymentContext.requestId,
+      payment_mode: paymentMode,
+     transaction_id: paymentMode === "upi" ? transactionId : "cash",
+    }).then(() => {
+      setPaidDpRequests((prev) => [...prev, paymentContext.requestId]);
+      closePaymentPopup();
+    });
+  }
+
+  if (paymentContext?.type === "merchant") {
+          updateMerchantPaymentProcess({
+        payment_id: paymentContext.requestId,
+        payment_mode: paymentMode,
+        transaction_id: paymentMode === "upi" ? transactionId : "cash",
+      }).then(() => {
+      setPaidMerchantRequests((prev) => [...prev, paymentContext.requestId]);
+      closePaymentPopup();
+    });
+  }
+};
+
   /* ---------------- SUMMARY CARDS ---------------- */
-  const summary = useMemo(() => {
-    const paid =
-      DP_PAYOUTS.reduce((s, x) => s + x.amount, 0) +
-      MERCHANT_PAYOUTS.reduce((s, x) => s + x.amount, 0);
+ const summary = useMemo(() => {
+  const dpPaid = dpPayoutApiData.reduce(
+    (s, x) => s + Number(x.total_amount || 0),
+    0
+  );
 
-    const pending =
-      dpRequests.reduce((s, x) => s + x.amount, 0) +
-      merchantRequests.reduce((s, x) => s + x.amount, 0);
+  const merchantPaid = merchantPayoutApiData.reduce(
+    (s, x) => s + Number(x.total_amount || 0),
+    0
+  );
 
-    return {
-      totalPaid: paid,
-      pendingRequests: pending,
-      totalRequests: dpRequests.length + merchantRequests.length,
-    };
-  }, [dpRequests, merchantRequests]);
+  const dpPending = dpRequestApiData.reduce(
+    (s, x) => s + Number(x.total_amount || 0),
+    0
+  );
+
+  const merchantPending = merchantRequestApiData.reduce(
+    (s, x) => s + Number(x.total_amount || 0),
+    0
+  );
+
+  return {
+    totalPaid: dpPaid + merchantPaid,
+    pendingRequests: dpPending + merchantPending,
+    totalRequests:
+      dpRequestApiData.length + merchantRequestApiData.length,
+  };
+}, [
+  dpPayoutApiData,
+  merchantPayoutApiData,
+  dpRequestApiData,
+  merchantRequestApiData,
+]);
 
   /* ---------------- ACTIONS ---------------- */
   const approveRequest = (id, type) => {
@@ -176,6 +278,105 @@ const filterByDateRange = (list) => {
     list.filter((x) =>
       JSON.stringify(x).toLowerCase().includes(search.toLowerCase())
     );
+
+    useEffect(() => {
+  if (activeTab !== "dp_payouts") return;
+  if (!fromDate || !toDate) return;
+
+  setLoadingDpPayouts(true);
+
+  getDeliveryPartnerPayout({
+    start_date: fromDate,
+    end_date: toDate,
+  })
+    .then((res) => {
+      if (res?.status) {
+        setDpPayoutApiData(res.data || []);
+      }
+    })
+    .catch(() => {
+      setDpPayoutApiData([]);
+    })
+    .finally(() => setLoadingDpPayouts(false));
+}, [activeTab, fromDate, toDate]);
+
+useEffect(() => {
+  if (activeTab !== "dp_requests") return;
+
+  setLoadingDpRequests(true);
+
+  getDeliveryPartnerPaymentRequests()
+    .then((res) => {
+      if (res?.status) {
+        setDpRequestApiData(res.data || []);
+      }
+    })
+    .catch(() => {
+      setDpRequestApiData([]);
+    })
+    .finally(() => setLoadingDpRequests(false));
+}, [activeTab]);
+
+useEffect(() => {
+  if (activeTab !== "merchant_requests") return;
+
+   setLoadingmerchantRequests(true);
+
+   getMerchantPaymentRequests()
+    .then((res) => {
+    if (res?.status) {
+      setMerchantRequestApiData(res.data || []);
+    }
+  })
+  .catch(() => {
+      setMerchantRequestApiData([]);
+    })
+    .finally(() => setLoadingmerchantRequests(false));
+}, [activeTab]);
+
+useEffect(() => {
+  if (activeTab !== "merchant_payouts") return;
+  if (!fromDate || !toDate) return;
+
+   setLoadingmerchantPayout(true);
+
+  getMerchantPayout({
+    start_date: fromDate, 
+    end_date: toDate 
+  })
+    .then((res) => {
+     if (res?.status) {
+        setMerchantPayoutApiData(res.data || []);
+          }
+    })
+    .catch(() => {
+      setMerchantPayoutApiData([]);
+    })
+    .finally(() => setLoadingmerchantPayout(false));
+       }, [activeTab, fromDate, toDate]);
+
+useEffect(() => {
+  if (activeTab !== "order_financials") return;
+
+  setLoadingCollections(true);
+
+  getCollectionFromDeliveryPartner()
+    .then((res) => {
+      if (res?.status) {
+        setDpCollectionApiData(res.data || []);
+      }
+    })
+    .catch(() => {
+      setDpCollectionApiData([]);
+    })
+    .finally(() => setLoadingCollections(false));
+}, [activeTab]);
+
+useEffect(() => {
+  const today = new Date().toISOString().split("T")[0];
+  setFromDate(today);
+  setToDate(today);
+}, []);
 
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-6">
@@ -230,7 +431,7 @@ const filterByDateRange = (list) => {
           onClick={() =>
             exportCSV(
               `${activeTab}.csv`,
-              activeTab === "order_financials" ? ORDER_FINANCIALS :
+              activeTab === "order_financials" ? dpCollectionApiData :
               activeTab === "dp_requests" ? dpRequests :
               activeTab === "merchant_requests" ? merchantRequests :
               activeTab === "dp_payouts" ? DP_PAYOUTS :
@@ -243,73 +444,138 @@ const filterByDateRange = (list) => {
         </button>
       </div>
 
+{/* DATE RANGE FILTER – ONLY FOR PAYOUT TABS */}
+{(activeTab === "dp_payouts" || activeTab === "merchant_payouts") && (
+  <div className="bg-white p-4 rounded-xl shadow flex flex-wrap gap-3 items-center">
+    <div className="flex flex-col text-sm">
+      <label className="text-gray-500">From Date</label>
+      <input
+        type="date"
+        value={fromDate}
+        onChange={(e) => setFromDate(e.target.value)}
+        className="border rounded-lg px-3 py-2"
+      />
+    </div>
+
+    <div className="flex flex-col text-sm">
+      <label className="text-gray-500">To Date</label>
+      <input
+        type="date"
+        value={toDate}
+        onChange={(e) => setToDate(e.target.value)}
+        className="border rounded-lg px-3 py-2"
+      />
+    </div>
+
+    {(fromDate || toDate) && (
+      <button
+        onClick={() => {
+          setFromDate("");
+          setToDate("");
+        }}
+        className="mt-5 text-sm text-red-600 underline"
+      >
+        Clear Dates
+      </button>
+    )}
+  </div>
+)}
+
    {/* ================= ORDER FINANCIALS ================= */}
       {activeTab === "order_financials" && (
         <div className="bg-white rounded-2xl shadow p-4 space-y-4">
 
           {/* SUMMARY BY DELIVERY PARTNER */}
-          {Object.entries(groupedByPartner).map(([partner, data]) => (
-            <div key={partner} className="border rounded-xl p-3">
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-medium">{partner}</div>
-                  <div className="text-sm text-gray-500">
-                    Orders: {data.orders.length}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">Total to Collect</div>
-                  <div className="text-lg font-bold text-red-600">
-                    ₹{data.total}
-                  </div>
-                  <button
-                    onClick={() =>
-                      setExpandedPartner(
-                        expandedPartner === partner ? null : partner
-                      )
-                    }
-                    className="text-sm text-blue-600 mt-1"
-                  >
-                    {expandedPartner === partner ? "Hide Orders" : "View Orders"}
-                  </button>
-                </div>
-              </div>
+         {loadingCollections && (
+  <div className="text-sm text-gray-500">Loading collections...</div>
+)}
 
-              {/* ORDER DETAILS */}
-              {expandedPartner === partner && (
-                <div className="mt-3 border-t pt-3 space-y-2">
-                  {filterBySearch(data.orders).map(o => {
-                    const merchantGets = o.order_value - o.commission;
-                    return (
-                      <div key={o.id} className="text-sm bg-gray-50 p-2 rounded">
-                        <div className="font-medium">{o.id}</div>
-                        <div className="text-gray-600">
-                          Merchant: {o.merchant}
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-1">
-                          <div>Order ₹{o.order_value}</div>
-                          <div>Commission ₹{o.commission}</div>
-                          <div className="text-green-600">Merchant Gets ₹{merchantGets}</div>
-                          <div>Delivery ₹{o.delivery_charge}</div>
-                          <div className="font-semibold">User Paid ₹{o.totalPaid}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+{!loadingCollections && dpCollectionApiData.length === 0 && (
+  <div className="text-sm text-gray-500">No collection data found</div>
+)}
+
+{dpCollectionApiData.map((d) => (
+  <div key={d.delivery_id} className="border rounded-xl p-3">
+    <div className="flex justify-between items-center">
+      <div>
+        <div className="font-medium">{d.full_name}</div>
+        <div className="text-sm text-gray-500">
+          Orders: {d.total_orders}
+        </div>
+      </div>
+
+      <div className="text-right">
+  <div className="text-sm text-gray-500">Total to Collect</div>
+
+  <div className="text-lg font-bold text-red-600">
+    ₹{d.total_amount}
+  </div>
+
+  {!d.is_collected ? (
+    <button
+  onClick={() => {
+    setCollectContext({
+      delivery_id: d.delivery_id,
+      amount: d.total_amount,
+    });
+    setShowCollectModal(true);
+  }}
+  className="mt-2 px-3 py-1 bg-green-600 text-white rounded text-sm"
+>
+  Mark as Collected
+</button>
+  ) : (
+    <div className="mt-2 text-sm text-green-600 font-semibold">
+      ✓ Collected
+    </div>
+  )}
+
+  {d.order_details.length > 0 && (
+    <button
+      onClick={() =>
+        setExpandedPartner(
+          expandedPartner === d.delivery_id ? null : d.delivery_id
+        )
+      }
+      className="text-sm text-blue-600 mt-1"
+    >
+      {expandedPartner === d.delivery_id
+        ? "Hide Orders"
+        : "View Orders"}
+    </button>
+  )}
+</div>
+
+    </div>
+
+    {/* ORDER DETAILS */}
+    {expandedPartner === d.delivery_id && (
+      <div className="mt-3 border-t pt-3 space-y-2">
+        {d.order_details.map((o, idx) => (
+          <div key={idx} className="text-sm bg-gray-50 p-2 rounded">
+            <div className="font-medium">{o.order_code}</div>
+            <div className="text-gray-600">
+              Merchant: {o.merchant_name}
             </div>
-          ))}
+            <div className="font-semibold">
+              ₹{o.total_amount}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+))}
         </div>
       )}
       
    {/* DP REQUESTS */}
 {activeTab === "dp_requests" && (
   <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-    {filterBySearch(dpRequests).map((r) => {
-      const isApproved = approvedDpRequests.includes(r.id);
+      {filterBySearch(dpRequestApiData).map((r) => {
+      const isApproved = approvedDpRequests.includes(r.payment_id);
       const isRejected = rejectedDpRequests.includes(r.id);
-      const isPaid = paidDpRequests.includes(r.id);
+      const isPaid = paidDpRequests.includes(r.payment_id);
 
       return (
         <div
@@ -317,18 +583,28 @@ const filterByDateRange = (list) => {
           className="flex justify-between items-center border-b py-2"
         >
           <div>
-            {r.name} • {r.type} • ₹{r.amount}
+           {r.full_name} • ₹{r.total_amount}
           </div>
 
           <div className="flex items-center gap-2">
             {/* APPROVE */}
             {!isApproved && !isRejected && (
               <button
-                onClick={() =>
-                  setApprovedDpRequests((prev) => [...prev, r.id])
+              onClick={() =>
+              updatePartnerPaymentRequest({
+                payment_id: r.payment_id,
+                request_status: "approved",
+              }).then((res) => {
+                if (!res?.status) {
+                  alert(res?.message || "Approval failed");
+                  return;
                 }
-                className="p-2 rounded bg-orange-100 text-orange-600"
-                title="Approve"
+
+                setApprovedDpRequests((prev) => [...prev, r.payment_id]);
+              })
+            }
+            className="p-2 rounded bg-orange-100 text-orange-600"
+              title="Approve"
               >
                 <CheckCircle size={18} />
               </button>
@@ -350,14 +626,19 @@ const filterByDateRange = (list) => {
             {/* MARK AS PAID */}
             {isApproved && !isPaid && (
               <button
-                onClick={() =>
-                  setPaidDpRequests((prev) => [...prev, r.id])
-                }
-                className="bg-orange-500 text-white px-3 py-1 rounded text-sm"
-              >
-                Mark as Paid
-              </button>
-            )}
+            onClick={() =>
+            openPaymentPopup({
+            type: "dp",
+            requestId: r.payment_id,   // ✅ MUST BE payment_id
+            name: r.full_name,
+            amount: r.total_amount,
+          })
+            }
+            className="bg-orange-500 text-white px-3 py-1 rounded text-sm"
+          >
+            Accept & Pay
+          </button>
+                    )}
 
             {/* FINAL STATE */}
             {isPaid && (
@@ -378,13 +659,13 @@ const filterByDateRange = (list) => {
   </div>
 )}
 
- {/* MERCHANT REQUESTS */}
+{/* MERCHANT REQUESTS */}
 {activeTab === "merchant_requests" && (
   <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-    {filterBySearch(merchantRequests).map((r) => {
-      const isApproved = approvedMerchantRequests.includes(r.id);
+    {filterBySearch(merchantRequestApiData).map((r) => {
+      const isApproved = approvedMerchantRequests.includes(r.payment_id);
       const isRejected = rejectedMerchantRequests.includes(r.id);
-      const isPaid = paidMerchantRequests.includes(r.id);
+      const isPaid = paidMerchantRequests.includes(r.payment_id);
 
       return (
         <div
@@ -392,7 +673,7 @@ const filterByDateRange = (list) => {
           className="flex justify-between items-center border-b py-2"
         >
           <div>
-            {r.name} • {r.type} • ₹{r.amount}
+            {r.name} • ₹{r.total_amount}
           </div>
 
           <div className="flex items-center gap-2">
@@ -400,8 +681,18 @@ const filterByDateRange = (list) => {
             {!isApproved && !isRejected && (
               <button
                 onClick={() =>
-                  setApprovedMerchantRequests((prev) => [...prev, r.id])
-                }
+                updateMerchantPaymentRequest({
+                  payment_id: r.payment_id,
+                  request_status: "approved",
+                }).then((res) => {
+                  if (!res?.status) {
+                    alert(res?.message || "Approval failed");
+                    return;
+                  }
+
+                  setApprovedMerchantRequests((prev) => [...prev, r.payment_id]);
+                })
+              }
                 className="p-2 rounded bg-orange-100 text-orange-600"
                 title="Approve"
               >
@@ -426,11 +717,16 @@ const filterByDateRange = (list) => {
             {isApproved && !isPaid && (
               <button
                 onClick={() =>
-                  setPaidMerchantRequests((prev) => [...prev, r.id])
+                  openPaymentPopup({
+                    type: "merchant",
+                    requestId: r.payment_id,
+                    name: r.name,
+                    amount: r.total_amount,
+                  })
                 }
                 className="bg-orange-500 text-white px-3 py-1 rounded text-sm"
               >
-                Mark as Paid
+                Accept & Pay
               </button>
             )}
 
@@ -453,60 +749,178 @@ const filterByDateRange = (list) => {
   </div>
 )}
 
+
 {/* DELIVERY PARTNER PAYOUTS */}
- {(activeTab === "dp_payouts" || activeTab === "merchant_payouts") && (
-  <div className="bg-white p-4 rounded-xl shadow flex gap-3 items-center">
-    <div>
-      <label className="text-xs text-gray-500">From</label>
-      <input
-        type="date"
-        value={fromDate}
-        onChange={(e) => setFromDate(e.target.value)}
-        className="border px-2 py-1 rounded text-sm"
-      />
-    </div>
+ {activeTab === "dp_payouts" && (
+  <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+    {loadingDpPayouts && (
+      <div className="text-sm text-gray-500">Loading payouts...</div>
+    )}
 
-    <div>
-      <label className="text-xs text-gray-500">To</label>
-      <input
-        type="date"
-        value={toDate}
-        onChange={(e) => setToDate(e.target.value)}
-        className="border px-2 py-1 rounded text-sm"
-      />
-    </div>
+    {!loadingDpPayouts && dpPayoutApiData.length === 0 && (
+      <div className="text-sm text-gray-500">
+        No payouts found for selected dates
+      </div>
+    )}
 
-    <button
-      onClick={() => {
-        setFromDate("");
-        setToDate("");
-      }}
-      className="ml-auto text-sm text-blue-600"
-    >
-      Clear
-    </button>
+    {dpPayoutApiData.map((p, index) => (
+      <div
+        key={index}
+        className="flex justify-between items-center border-b py-2"
+      >
+        <div>
+          <div className="font-medium">{p.full_name}</div>
+          <div className="text-xs text-gray-500">
+            📞 {p.phone} • Orders: {p.total_orders}
+          </div>
+        </div>
+
+        <div className="text-green-600 font-semibold">
+          ₹{p.total_amount}
+        </div>
+      </div>
+    ))}
   </div>
 )}
 
 {/* MERCHANT PAYOUTS */}
 {activeTab === "merchant_payouts" && (
   <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-    {filterByDateRange(filterBySearch(MERCHANT_PAYOUTS)).map((p) => (
-      <div
-        key={p.id}
-        className="flex justify-between border-b py-2"
-      >
-        <div>
-          {p.name} • {p.period}
-          <div className="text-xs text-gray-500">
-            {new Date(p.date).toLocaleDateString()}
-          </div>
-        </div>
-        <div className="text-green-600 font-medium">
-          ₹{p.amount}
-        </div>
+   {filterBySearch(merchantPayoutApiData).map((p, idx) => (
+  <div
+    key={`${p.name}-${idx}`}   // ✅ guaranteed unique
+    className="flex justify-between border-b py-2"
+  >
+      <div>
+  <div className="font-medium">{p.name}</div>
+  <div className="text-xs text-gray-500">
+    📞 {p.phone} • Orders: {p.total_orders}
+  </div>
+</div>
+<div className="text-green-600 font-semibold">
+  ₹{p.total_amount}
+</div>
       </div>
     ))}
+  </div>
+)}
+{showPaymentModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-5 space-y-4">
+      <h3 className="text-lg font-semibold">Confirm Payment</h3>
+
+      <div className="text-sm text-gray-600">
+        {paymentContext?.name} • ₹{paymentContext?.amount}
+      </div>
+
+      {/* PAYMENT MODE */}
+      <div>
+        <label className="text-sm text-gray-500">Payment Mode</label>
+        <select
+          value={paymentMode}
+          onChange={(e) => setPaymentMode(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 mt-1"
+        >
+          <option value="">Select mode</option>
+          <option value="upi">UPI</option>
+          <option value="cash">Cash</option>
+        </select>
+      </div>
+
+      {/* TRANSACTION ID (ONLY FOR UPI) */}
+      {paymentMode === "upi" && (
+        <div>
+          <label className="text-sm text-gray-500">Transaction ID</label>
+          <input
+            type="text"
+            value={transactionId}
+            onChange={(e) => setTransactionId(e.target.value)}
+            placeholder="Enter UPI transaction ID"
+            className="w-full border rounded-lg px-3 py-2 mt-1"
+          />
+        </div>
+      )}
+
+      {/* ACTIONS */}
+      <div className="flex justify-end gap-3 pt-3">
+        <button
+          onClick={closePaymentPopup}
+          className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700"
+        >
+          Cancel
+        </button>
+        <button
+        onClick={submitPayment}
+        disabled={isSubmitDisabled}
+        className={`px-4 py-2 rounded-lg text-white transition ${
+          isSubmitDisabled
+            ? "bg-gray-300 cursor-not-allowed"
+            : "bg-orange-500 hover:bg-orange-600"
+        }`}
+      >
+        Submit
+      </button>
+      </div>
+    </div>
+  </div>
+)}
+{showCollectModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-5 space-y-4">
+      <h3 className="text-lg font-semibold">
+        Confirm Collection
+      </h3>
+
+      <p className="text-sm text-gray-600">
+        Are you sure you want to mark this amount as collected?
+      </p>
+
+      <div className="text-lg font-bold text-red-600">
+        ₹{collectContext?.amount}
+      </div>
+
+      <div className="flex justify-end gap-3 pt-3">
+        <button
+          onClick={() => {
+            setShowCollectModal(false);
+            setCollectContext(null);
+          }}
+          className="px-4 py-2 rounded-lg bg-gray-200"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={() => {
+            updateCollectionStatus({
+              delivery_id: collectContext.delivery_id,
+              amount: collectContext.amount,
+              is_collected: true,
+            }).then((res) => {
+              if (!res?.status) {
+                alert(res?.message || "Failed to update");
+                return;
+              }
+
+              // ✅ Update UI instantly
+              setDpCollectionApiData((prev) =>
+                prev.map((x) =>
+                  x.delivery_id === collectContext.delivery_id
+                    ? { ...x, is_collected: true }
+                    : x
+                )
+              );
+
+              setShowCollectModal(false);
+              setCollectContext(null);
+            });
+          }}
+          className="px-4 py-2 rounded-lg bg-green-600 text-white"
+        >
+          Yes, Mark Collected
+        </button>
+      </div>
+    </div>
   </div>
 )}
   </div>
