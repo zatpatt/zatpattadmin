@@ -32,7 +32,6 @@ export default function SettingsPage() {
 
         {/* Delivery & Fees */}
         <div className="space-y-2">
-          <h3 className="font-semibold text-lg">Delivery & Fees</h3>
           <div className="flex flex-wrap gap-3 items-center">
             <label className="flex flex-col">
               Delivery Fee
@@ -75,7 +74,6 @@ export default function SettingsPage() {
 
         {/* Surge / Peak Pricing */}
         <div className="space-y-2">
-          <h3 className="font-semibold text-lg">Surge / Peak Pricing</h3>
           <label className="flex flex-col w-48">
             Surge Multiplier
             <input
@@ -88,7 +86,7 @@ export default function SettingsPage() {
           </label>
         </div>
 
-        {/* Payment & Firebase Keys */}
+        {/* Payment & Firebase Keys
         <div className="space-y-2">
           <h3 className="font-semibold text-lg">Keys & Integrations</h3>
           <div className="flex flex-wrap gap-3">
@@ -111,7 +109,7 @@ export default function SettingsPage() {
               />
             </label>
           </div>
-        </div>
+        </div> */}
 
         {/* Maintenance Mode & App Version */}
         <div className="space-y-2">

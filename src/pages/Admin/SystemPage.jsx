@@ -14,16 +14,16 @@ import SettingsPage from "./SettingsPage";
 import GeoZonesPage from "./GeoZonesPage";
 import BannersPage from "./BannersPage";
 import NotificationsPage from "./NotificationsPage";
-import RolesAndSecurityPage from "./RolesAndSecurityPage";
-import DeveloperSettingsPage from "./DeveloperSettingsPage";
+// import RolesAndSecurityPage from "./RolesAndSecurityPage";
+// import DeveloperSettingsPage from "./DeveloperSettingsPage";
 
 const sections = [
   { name: "⚙️ Settings", icon: <Settings size={18} />, component: <SettingsPage /> },
   { name: "🌐 Geo Zones", icon: <Globe size={18} />, component: <GeoZonesPage /> },
   { name: "🖼️ Banners", icon: <Image size={18} />, component: <BannersPage /> },
   { name: "🔔 Notifications", icon: <Bell size={18} />, component: <NotificationsPage /> },
-  { name: "🔐 Roles & Security", icon: <Shield size={18} />, component: <RolesAndSecurityPage /> },
-  { name: "🛠️ Developer / System Settings", icon: <Key size={18} />, component: <DeveloperSettingsPage /> },
+  // { name: "🔐 Roles & Security", icon: <Shield size={18} />, component: <RolesAndSecurityPage /> },
+  // { name: "🛠️ Developer / System Settings", icon: <Key size={18} />, component: <DeveloperSettingsPage /> },
 ];
 
 export default function SystemPage() {
